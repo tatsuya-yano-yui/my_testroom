@@ -3,38 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebVR App</title>
+  <title>WebXR YouTube Video</title>
+  <script src="https://cdn.jsdelivr.net/npm/@immersive-web/webxr@0.10.0/dist/webxr.js"></script>
 </head>
 <body>
-  <script type="module">
-    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.154.0/build/three.module.js';
-    import { VRButton } from 'https://cdn.jsdelivr.net/npm/three@0.154.0/examples/jsm/webxr/VRButton.js';
+  <h1>WebXR YouTube Video Example</h1>
+  <script>
+    let xrSession = null;
+    let xrMediaFactory = null;
+    let videoLayer = null;
 
-    // シーン、カメラ、レンダラーのセットアップ
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    document.body.appendChild(renderer.domElement);
-    document.body.appendChild(VRButton.createButton(renderer));
+    // YouTube動画のURL
+    const videoUrl = 'https://www.youtube.com/embed/mLfLqnDeqIc';
 
-    // 簡単なオブジェクトを作成
-    const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
+    // WebXRセッションを開始する
+    async function startXR() {
+      try {
+        const xrDevice = await navigator.xr.requestDevice();
+        xrSession = await xrDevice.requestSession({ immersive: true });
+        xrMediaFactory = new XRMediaBinding(xrSession);
 
-    camera.position.z = 10;
+        // YouTubeの動画を埋め込むためのiframeを作成
+        const iframe = document.createElement('iframe');
+        iframe.src = videoUrl;
+        iframe.style.width = '100%';
+        iframe.style.height = '100%';
+        iframe.frameborder = "0";
+        iframe.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture";
+        
+        // レイヤーを作成して動画をVR環境に配置
+        videoLayer = xrMediaFactory.createCylinderLayer(iframe, {
+          space: xrSession.requestReferenceSpace("local"),
+          layout: "stereo-top-bottom"
+        });
 
-    function animate() {
-      cube.rotation.x += 0.01;
-      cube.rotation.y += 0.01;
-      renderer.setAnimationLoop(() => {
-        renderer.render(scene, camera);
-      });
+        // VRセッションにレイヤーを追加
+        xrSession.updateRenderState({ layers: [videoLayer] });
+
+        // VRセッションを開始
+        xrSession.requestAnimationFrame(render);
+      } catch (error) {
+        console.error("XRセッションの開始エラー:", error);
+      }
     }
-    animate();
+
+    // レンダリングループ
+    function render(time, frame) {
+      xrSession.requestAnimationFrame(render);
+      // 他のレンダリング処理をここに追加可能
+    }
+
+    // ページが読み込まれたらWebXRセッションを開始
+    window.addEventListener('load', startXR);
   </script>
 </body>
 </html>
