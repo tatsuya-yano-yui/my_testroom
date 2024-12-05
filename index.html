@@ -3,57 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebXR YouTube Video</title>
-  <script src="https://cdn.jsdelivr.net/npm/@immersive-web/webxr@0.10.0/dist/webxr.js"></script>
+  <title>WebXR Video Example</title>
 </head>
 <body>
-  <h1>WebXR YouTube Video Example</h1>
+  <h1>WebXR Video Example</h1>
   <script>
-    let xrSession = null;
-    let xrMediaFactory = null;
-    let videoLayer = null;
-
-    // YouTube動画のURL
-    const videoUrl = 'https://www.youtube.com/embed/mLfLqnDeqIc';
-
-    // WebXRセッションを開始する
     async function startXR() {
       try {
-        const xrDevice = await navigator.xr.requestDevice();
-        xrSession = await xrDevice.requestSession({ immersive: true });
-        xrMediaFactory = new XRMediaBinding(xrSession);
+        // WebXRが利用可能か確認
+        if (!navigator.xr) {
+          console.error("WebXRがサポートされていません。対応ブラウザを使用してください。");
+          return;
+        }
 
-        // YouTubeの動画を埋め込むためのiframeを作成
-        const iframe = document.createElement('iframe');
-        iframe.src = videoUrl;
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.frameborder = "0";
-        iframe.allow = "accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture";
-        
-        // レイヤーを作成して動画をVR環境に配置
-        videoLayer = xrMediaFactory.createCylinderLayer(iframe, {
-          space: xrSession.requestReferenceSpace("local"),
-          layout: "stereo-top-bottom"
-        });
+        // Immersive-VRセッションをリクエスト
+        const xrSession = await navigator.xr.requestSession('immersive-vr');
 
-        // VRセッションにレイヤーを追加
-        xrSession.updateRenderState({ layers: [videoLayer] });
+        console.log("XRセッションが開始されました:", xrSession);
 
-        // VRセッションを開始
-        xrSession.requestAnimationFrame(render);
+        // WebXR用の設定やレンダリング処理をここに追加
       } catch (error) {
-        console.error("XRセッションの開始エラー:", error);
+        console.error("XRセッションの開始中にエラーが発生しました:", error);
       }
     }
 
-    // レンダリングループ
-    function render(time, frame) {
-      xrSession.requestAnimationFrame(render);
-      // 他のレンダリング処理をここに追加可能
-    }
-
-    // ページが読み込まれたらWebXRセッションを開始
+    // ページロード時にWebXRセッションを開始
     window.addEventListener('load', startXR);
   </script>
 </body>
