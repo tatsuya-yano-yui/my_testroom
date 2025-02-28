@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>getUserMedia-Demo</title>
+  <style> 
+    body {
+	background-color: #07045c8a;
+	}
+  </style>
+</head>
+<body>
+
+<!-- カメラ映像が描画されます。 -->
+<video id="video_area" style="background-color: #000" autoplay></video>
+
+<!-- カメラ選択用のドロップダウン -->
+<select id="camera_select"></select>
+
+<!-- 押下するとカメラ映像描画を開始します。 -->
+<button id="start_btn">映像表示開始</button>
+
+<script>
+  // getUserMedia が使えないときは、エラーを表示します。
+  if (typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    const err = new Error('getUserMedia()が使えないブラウザだよ');
+    alert(`${err.name} ${err.message}`);
+    throw err;
+  }
+
+  const $start = document.getElementById('start_btn');
+  const $video = document.getElementById('video_area');
+  const $cameraSelect = document.getElementById('camera_select');
+
+  // まずはユーザーにカメラアクセス許可を求めるために、一度 getUserMedia を呼んでおく
+  // これによりラベルが取得できるようになり、複数カメラを正しく検出できます
+  // その後、実際のカメラ一覧を取得してセレクトボックスに入れます
+
+  async function prepareDeviceList() {
+    try {
+      // ここでは一旦ビデオストリームを取得し、すぐに停止しておきます
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // ストリームを停止
+      stream.getTracks().forEach(track => track.stop());
+
+      // ここで改めてデバイス一覧を取得
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      $cameraSelect.innerHTML = '';
+      let videoCount = 0;
+
+      devices.forEach(device => {
+        if (device.kind === 'videoinput') {
+          videoCount++;
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          // ラベルが空の場合を考慮し、"カメラ n" のようにしておく
+          option.text = device.label || `カメラ ${videoCount}`;
+          $cameraSelect.appendChild(option);
+        }
+      });
+
+      if (videoCount === 0) {
+        alert('カメラが検出されませんでした。');
+      }
+    } 
+    catch (err) {
+    alert(`${err.name} : ${err.message}`);
+    throw err;
+    }
+  }
+
+  // prepareDeviceList呼び出しでデバイス一覧を更新
+  prepareDeviceList();
+
+  // 選択したカメラの映像を表示
+  $start.addEventListener('click', () => {
+    const selectedDeviceId = $cameraSelect.value;
+
+    const constraints = {
+      video: {
+        deviceId: { exact: selectedDeviceId },
+        // 必要に応じて幅や高さなどを指定
+        // width: { ideal: 1280 },
+        // height: { ideal: 720 }
+      },
+      audio: false
+    };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(stream => {
+        $video.srcObject = stream;
+      })
+      .catch(err => {
+        alert(`${err.name} : ${err.message}`);
+      });
+  });
+</script>
+
+</body>
+</html>
