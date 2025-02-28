@@ -81,8 +81,8 @@
       video: {
         deviceId: { exact: selectedDeviceId },
         // 必要に応じて幅や高さなどを指定
-        // width: { ideal: 1280 },
-        // height: { ideal: 720 }
+        width: { ideal: document.body.clientWidth },
+	height: { ideal: document.body.clientHeight }
       },
       audio: false
     };
