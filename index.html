@@ -4,98 +4,121 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width">
   <title>getUserMedia-Demo</title>
-  <style> 
+  <style>
+    /* 余白をなくす */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* body が画面いっぱいになるように */
     body {
-	background-color: #07045c8a;
-	}
+      background-color: #07045c8a;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden; /* スクロールバーを非表示にしたい場合 */
+    }
+
+    /* video を画面いっぱいに広げる */
+    #video_area {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* 画像が引き伸ばされないように中央を基準に等倍表示 */
+      background-color: #000;
+      z-index: 1;
+    }
+
+    /* ボタンとセレクトボックスを前面に配置して動画の上に重ねる例 */
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 2; /* video_area より前面 */
+    }
   </style>
 </head>
 <body>
+  <video id="video_area" autoplay></video>
+  <div id="controls">
+    <!-- カメラ選択用のドロップダウン -->
+    <select id="camera_select"></select>
+    <!-- 押下するとカメラ映像描画を開始します。 -->
+    <button id="start_btn">映像表示開始</button>
+  </div>
 
-<!-- カメラ映像が描画されます。 -->
-<video id="video_area" style="background-color: #000" autoplay></video>
-
-<!-- カメラ選択用のドロップダウン -->
-<select id="camera_select"></select>
-
-<!-- 押下するとカメラ映像描画を開始します。 -->
-<button id="start_btn">映像表示開始</button>
-
-<script>
-  // getUserMedia が使えないときは、エラーを表示します。
-  if (typeof navigator.mediaDevices.getUserMedia !== 'function') {
-    const err = new Error('getUserMedia()が使えないブラウザだよ');
-    alert(`${err.name} ${err.message}`);
-    throw err;
-  }
-
-  const $start = document.getElementById('start_btn');
-  const $video = document.getElementById('video_area');
-  const $cameraSelect = document.getElementById('camera_select');
-
-  // まずはユーザーにカメラアクセス許可を求めるために、一度 getUserMedia を呼んでおく
-  // これによりラベルが取得できるようになり、複数カメラを正しく検出できます
-  // その後、実際のカメラ一覧を取得してセレクトボックスに入れます
-
-  async function prepareDeviceList() {
-    try {
-      // ここでは一旦ビデオストリームを取得し、すぐに停止しておきます
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      // ストリームを停止
-      stream.getTracks().forEach(track => track.stop());
-
-      // ここで改めてデバイス一覧を取得
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      $cameraSelect.innerHTML = '';
-      let videoCount = 0;
-
-      devices.forEach(device => {
-        if (device.kind === 'videoinput') {
-          videoCount++;
-          const option = document.createElement('option');
-          option.value = device.deviceId;
-          // ラベルが空の場合を考慮し、"カメラ n" のようにしておく
-          option.text = device.label || `カメラ ${videoCount}`;
-          $cameraSelect.appendChild(option);
-        }
-      });
-
-      if (videoCount === 0) {
-        alert('カメラが検出されませんでした。');
-      }
-    } 
-    catch (err) {
-    alert(`${err.name} : ${err.message}`);
-    throw err;
+  <script>
+    // getUserMedia が使えないときは、エラーを表示します。
+    if (typeof navigator.mediaDevices.getUserMedia !== 'function') {
+      const err = new Error('getUserMedia()が使えないブラウザです。');
+      alert(`${err.name} ${err.message}`);
+      throw err;
     }
-  }
 
-  // prepareDeviceList呼び出しでデバイス一覧を更新
-  prepareDeviceList();
+    const $start = document.getElementById('start_btn');
+    const $video = document.getElementById('video_area');
+    const $cameraSelect = document.getElementById('camera_select');
 
-  // 選択したカメラの映像を表示
-  $start.addEventListener('click', () => {
-    const selectedDeviceId = $cameraSelect.value;
+    // まずはユーザーにカメラアクセス許可を求めるために、一度 getUserMedia を呼んでおく
+    // これによりラベルが取得でき、複数カメラを正しく検出できます。
+    async function prepareDeviceList() {
+      try {
+        // ここでは一旦ビデオストリームを取得し、すぐに停止しておきます
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        stream.getTracks().forEach(track => track.stop());
 
-    const constraints = {
-      video: {
-        deviceId: { exact: selectedDeviceId },
-        // 必要に応じて幅や高さなどを指定
-        width: { ideal: document.body.clientWidth },
-	height: { ideal: document.body.clientHeight }
-      },
-      audio: false
-    };
+        // 改めてデバイス一覧を取得
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        $cameraSelect.innerHTML = '';
+        let videoCount = 0;
 
-    navigator.mediaDevices.getUserMedia(constraints)
-      .then(stream => {
-        $video.srcObject = stream;
-      })
-      .catch(err => {
+        devices.forEach(device => {
+          if (device.kind === 'videoinput') {
+            videoCount++;
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.text = device.label || `カメラ ${videoCount}`;
+            $cameraSelect.appendChild(option);
+          }
+        });
+
+        if (videoCount === 0) {
+          alert('カメラが検出されませんでした。');
+        }
+      } catch (err) {
         alert(`${err.name} : ${err.message}`);
-      });
-  });
-</script>
+        throw err;
+      }
+    }
 
+    // 初期処理: カメラ一覧の準備
+    prepareDeviceList();
+
+    // 選択したカメラの映像を表示
+    $start.addEventListener('click', () => {
+      const selectedDeviceId = $cameraSelect.value;
+      const constraints = {
+        video: {
+          deviceId: { exact: selectedDeviceId },
+          width: { ideal: 1920 },  // 必要に応じて調整
+          height: { ideal: 1080 }  // 必要に応じて調整
+        },
+        audio: false
+      };
+
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+          $video.srcObject = stream;
+        })
+        .catch(err => {
+          alert(`${err.name} : ${err.message}`);
+        });
+    });
+  </script>
 </body>
 </html>
